@@ -3,7 +3,7 @@ import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.152.0/exampl
 
 // Scene, Camera, Renderer
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x88ccff); // Light blue for a snowy sky
+scene.background = new THREE.Color(0x000011); // Dark blue for night sky
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
 camera.position.set(10, 10, 15);
@@ -23,16 +23,16 @@ ground.receiveShadow = true;
 scene.add(ground);
 
 // Fog
-scene.fog = new THREE.Fog(0x88ccff, 10, 50);
+scene.fog = new THREE.Fog(0x000011, 10, 50); // Night fog
 
 // Moonlight
-const moonLight = new THREE.DirectionalLight(0xeeeeff, 0.6); // Brighter, cooler moonlight
+const moonLight = new THREE.DirectionalLight(0xaaaaff, 0.4); // Cool moonlight for nighttime
 moonLight.position.set(10, 30, -10);
 moonLight.castShadow = true;
 scene.add(moonLight);
 
 // Ambient light
-const ambientLight = new THREE.AmbientLight(0x999999, 0.5); // Softer ambient light
+const ambientLight = new THREE.AmbientLight(0x222222, 0.3); // Dim ambient light for night
 scene.add(ambientLight);
 
 // Shrine bounds
@@ -47,8 +47,9 @@ const isPositionInShrineArea = (x, y, z) => {
   return shrineBounds.containsPoint(position);
 };
 
-// Trees with layered leaves
-const treeMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff }); // White for snowy trees
+// Trees with brown trunks and layered leaves
+const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x8b4513 }); // Brown for tree trunks
+const snowMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff }); // Snow for leaves
 
 for (let i = 0; i < 50; i++) {
   const x = Math.random() * 40 - 20;
@@ -57,7 +58,7 @@ for (let i = 0; i < 50; i++) {
   if (!isPositionInShrineArea(x, 3, z)) {
     const trunk = new THREE.Mesh(
       new THREE.CylinderGeometry(0.3, 0.5, 6, 16),
-      treeMaterial
+      trunkMaterial
     );
     trunk.position.set(x, 3, z);
     trunk.castShadow = true;
@@ -67,7 +68,7 @@ for (let i = 0; i < 50; i++) {
     for (let j = 0; j < 3; j++) {
       const foliage = new THREE.Mesh(
         new THREE.ConeGeometry(2 - j * 0.5, 2, 16),
-        treeMaterial
+        snowMaterial
       );
       foliage.position.set(x, trunk.position.y + 4 + j * 1.5, z);
       foliage.castShadow = true;
@@ -130,14 +131,14 @@ for (let i = 0; i < 15; i++) {
 const shrine = new THREE.Group();
 const base = new THREE.Mesh(
   new THREE.BoxGeometry(3, 1, 3),
-  new THREE.MeshStandardMaterial({ color: 0xaaaaaa }) // Light gray for the shrine base
+  new THREE.MeshStandardMaterial({ color: 0x555555 }) // Dark gray base
 );
 base.position.y = 0.5;
 base.castShadow = true;
 
 const orb = new THREE.Mesh(
   new THREE.SphereGeometry(0.5, 16, 16),
-  new THREE.MeshStandardMaterial({ emissive: 0x00ff88, emissiveIntensity: 2 })
+  new THREE.MeshStandardMaterial({ emissive: 0x000000, emissiveIntensity: 10 }) // Bright black glow
 );
 orb.position.y = 2;
 orb.castShadow = true;
@@ -164,9 +165,9 @@ const animate = () => {
     if (light.position.z < -20 || light.position.z > 20) velocity.z *= -1;
   });
 
-  // Shrine orb pulse
+  // Shrine orb pulsing effect
   const intensity = Math.abs(Math.sin(elapsedTime));
-  orb.material.emissiveIntensity = intensity * 3;
+  orb.material.emissiveIntensity = intensity * 10; // Amplified for a bright glow
 
   controls.update();
   renderer.render(scene, camera);
