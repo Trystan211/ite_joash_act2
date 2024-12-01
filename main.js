@@ -1,242 +1,172 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.module.js';
 import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.152.0/examples/jsm/controls/OrbitControls.js';
-import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.152.0/examples/jsm/loaders/GLTFLoader.js';
 
-// Scene Setup
+// Scene, Camera, Renderer
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xffc8a3);
-scene.fog = new THREE.Fog(0xd56b4f, 10, 50);
+scene.background = new THREE.Color(0x88ccff); // Light blue for a snowy sky
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(20, 10, 30);
+camera.position.set(10, 10, 15);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
 
-// OrbitControls
+// Ground
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(50, 50),
+  new THREE.MeshStandardMaterial({ color: 0xffffff }) // Snowy ground
+);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Fog
+scene.fog = new THREE.Fog(0x88ccff, 10, 50);
+
+// Moonlight
+const moonLight = new THREE.DirectionalLight(0xeeeeff, 0.6); // Brighter, cooler moonlight
+moonLight.position.set(10, 30, -10);
+moonLight.castShadow = true;
+scene.add(moonLight);
+
+// Ambient light
+const ambientLight = new THREE.AmbientLight(0x999999, 0.5); // Softer ambient light
+scene.add(ambientLight);
+
+// Shrine bounds
+const shrineBounds = new THREE.Box3(
+  new THREE.Vector3(-2, 0, -2), 
+  new THREE.Vector3(2, 6, 2)
+);
+
+// Helper function
+const isPositionInShrineArea = (x, y, z) => {
+  const position = new THREE.Vector3(x, y, z);
+  return shrineBounds.containsPoint(position);
+};
+
+// Trees with layered leaves
+const treeMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff }); // White for snowy trees
+
+for (let i = 0; i < 50; i++) {
+  const x = Math.random() * 40 - 20;
+  const z = Math.random() * 40 - 20;
+  
+  if (!isPositionInShrineArea(x, 3, z)) {
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.3, 0.5, 6, 16),
+      treeMaterial
+    );
+    trunk.position.set(x, 3, z);
+    trunk.castShadow = true;
+
+    // Layered foliage
+    const foliageLayers = [];
+    for (let j = 0; j < 3; j++) {
+      const foliage = new THREE.Mesh(
+        new THREE.ConeGeometry(2 - j * 0.5, 2, 16),
+        treeMaterial
+      );
+      foliage.position.set(x, trunk.position.y + 4 + j * 1.5, z);
+      foliage.castShadow = true;
+      foliageLayers.push(foliage);
+    }
+
+    scene.add(trunk, ...foliageLayers);
+  }
+}
+
+// Mushrooms with red caps
+const mushroomCapMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 }); // Red cap
+const mushroomStemMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff }); // White stem
+
+for (let i = 0; i < 50; i++) {
+  const x = Math.random() * 40 - 20;
+  const z = Math.random() * 40 - 20;
+  
+  if (!isPositionInShrineArea(x, 0.25, z)) {
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.1, 0.2, 0.5),
+      mushroomStemMaterial
+    );
+    const cap = new THREE.Mesh(
+      new THREE.ConeGeometry(0.4, 0.3, 8),
+      mushroomCapMaterial
+    );
+    stem.position.set(x, 0.25, z);
+    cap.position.set(x, 0.55, z);
+
+    stem.castShadow = true;
+    cap.castShadow = true;
+
+    scene.add(stem);
+    scene.add(cap);
+  }
+}
+
+// Fireflies
+const fireflies = [];
+for (let i = 0; i < 15; i++) {
+  const firefly = new THREE.PointLight(0xffff00, 2, 7);
+  firefly.position.set(
+    Math.random() * 40 - 20,
+    Math.random() * 5 + 1,
+    Math.random() * 40 - 20
+  );
+  scene.add(firefly);
+  fireflies.push({
+    light: firefly,
+    velocity: new THREE.Vector3(
+      (Math.random() - 0.5) * 0.05,
+      (Math.random() - 0.5) * 0.05,
+      (Math.random() - 0.5) * 0.05
+    ),
+  });
+}
+
+// Shrine
+const shrine = new THREE.Group();
+const base = new THREE.Mesh(
+  new THREE.BoxGeometry(3, 1, 3),
+  new THREE.MeshStandardMaterial({ color: 0xaaaaaa }) // Light gray for the shrine base
+);
+base.position.y = 0.5;
+base.castShadow = true;
+
+const orb = new THREE.Mesh(
+  new THREE.SphereGeometry(0.5, 16, 16),
+  new THREE.MeshStandardMaterial({ emissive: 0x00ff88, emissiveIntensity: 2 })
+);
+orb.position.y = 2;
+orb.castShadow = true;
+
+shrine.add(base);
+shrine.add(orb);
+scene.add(shrine);
+
+// Camera Controls
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.25;
 
-// Ground
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(60, 60),
-  new THREE.MeshStandardMaterial({ color: 0x8b3e3e })
-);
-ground.rotation.x = -Math.PI / 2;
-scene.add(ground);
-
-// Lights
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
-scene.add(ambientLight);
-
-const sunlight = new THREE.DirectionalLight(0xffd4a6, 0.6);
-sunlight.position.set(10, 20, -5);
-scene.add(sunlight);
-
-// Restricted Area (Shrine Center)
-let restrictedArea = {
-  x: 0,
-  z: 0,
-  radius: 15
-};
-
-// Check if a position is outside the restricted area
-function isOutsideRestrictedArea(x, z) {
-  const dx = x - restrictedArea.x;
-  const dz = z - restrictedArea.z;
-  return Math.sqrt(dx * dx + dz * dz) >= restrictedArea.radius;
-}
-
-// Get a random position outside the restricted area
-function getRandomPositionOutsideRestrictedArea() {
-  let x, z;
-  do {
-    x = Math.random() * 50 - 25;
-    z = Math.random() * 50 - 25;
-  } while (!isOutsideRestrictedArea(x, z));
-  return { x, z };
-}
-
-// Load Shrine Model
-const loader = new GLTFLoader();
-loader.load(
-  'https://trystan211.github.io/test_joshua/fox_stone_statue_handpainted_kitsune.glb',
-  (gltf) => {
-    const shrine = gltf.scene;
-
-    shrine.position.set(restrictedArea.x, -0.5, restrictedArea.z);
-    shrine.scale.set(310, 310, 310);
-    scene.add(shrine);
-
-    // Calculate bounding box and update restricted radius
-    const boundingBox = new THREE.Box3().setFromObject(shrine);
-    const size = new THREE.Vector3();
-    boundingBox.getSize(size);
-    restrictedArea.radius = Math.max(size.x, size.z) / 2 + 1;
-    console.log(`Restricted area radius updated: ${restrictedArea.radius}`);
-  },
-  undefined,
-  (error) => console.error('Error loading shrine model:', error)
-);
-
-// Trees and Mushrooms
-const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x5b341c });
-const leafMaterial = new THREE.MeshStandardMaterial({ color: 0xd35f45 });
-const mushroomMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-
-const trees = [];
-
-for (let i = 0; i < 20; i++) {
-  const position = getRandomPositionOutsideRestrictedArea();
-
-  // Create a group for the whole tree
-  const treeGroup = new THREE.Group();
-
-  // Tree trunk
-  const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.5, 0.5, 8),
-    trunkMaterial
-  );
-  trunk.position.set(0, 4, 0);
-  treeGroup.add(trunk);
-
-  // Tree foliage
-  for (let j = 0; j < 4; j++) {
-    const foliage = new THREE.Mesh(
-      new THREE.ConeGeometry(5 - j * 1.5, 4),
-      leafMaterial
-    );
-    foliage.position.set(0, 8 + j * 2.5, 0);
-    treeGroup.add(foliage);
-  }
-
-  // Position the whole tree group
-  treeGroup.position.set(position.x, 0, position.z);
-
-  // Add the tree group to the scene and store it for interaction
-  scene.add(treeGroup);
-  trees.push(treeGroup);
-}
-
-// Load Fox Models
-loader.load(
-  'https://trystan211.github.io/test_joshua/low_poly_fox.glb',
-  (gltf) => {
-    for (let i = 0; i < 5; i++) {
-      const position = getRandomPositionOutsideRestrictedArea();
-      const rotationY = Math.random() * Math.PI * 2;
-
-      const fox = gltf.scene.clone();
-      fox.position.set(position.x, 1, position.z);
-      fox.rotation.y = rotationY;
-      fox.scale.set(1, 1, 1);
-      scene.add(fox);
-    }
-  },
-  undefined,
-  (error) => console.error('Error loading fox model:', error)
-);
-
-// Rocks
-const rockMaterial = new THREE.MeshStandardMaterial({
-  color: 0xffffff,
-  roughness: 0.9,
-  metalness: 0.1
-});
-
-for (let i = 0; i < 15; i++) {
-  const position = getRandomPositionOutsideRestrictedArea();
-
-  const rock = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(Math.random() * 2 + 1, 1),
-    rockMaterial
-  );
-  rock.position.set(position.x, 0.5, position.z);
-  scene.add(rock);
-}
-
-// Red Rain Particles
-const particleCount = 1000;
-const particlesGeometry = new THREE.BufferGeometry();
-const positions = [];
-const velocities = [];
-
-for (let i = 0; i < particleCount; i++) {
-  positions.push(
-    Math.random() * 100 - 50, // X
-    Math.random() * 50 + 10,  // Y
-    Math.random() * 100 - 50 // Z
-  );
-  velocities.push(0, Math.random() * -0.1, 0); // Falling effect
-}
-
-particlesGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-particlesGeometry.setAttribute('velocity', new THREE.Float32BufferAttribute(velocities, 3));
-
-const particlesMaterial = new THREE.PointsMaterial({
-  color: 0xb94e48,
-  size: 0.5,
-  transparent: true,
-  opacity: 0.8
-});
-
-const particles = new THREE.Points(particlesGeometry, particlesMaterial);
-scene.add(particles);
-
-// Raycaster for tree interaction
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-
-window.addEventListener('click', (event) => {
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-  raycaster.setFromCamera(mouse, camera);
-
-  const intersects = raycaster.intersectObjects(trees, true); // Use `true` for recursive checking
-  if (intersects.length > 0) {
-    const treeGroup = intersects[0].object.parent;
-
-    // Change size and color for all parts of the tree
-    treeGroup.scale.multiplyScalar(1.2);
-    treeGroup.children.forEach((child) => {
-      if (child.material) {
-        child.material.color.set(0x4b2a17); // Darker color
-      }
-    });
-
-    // Revert changes after 2 seconds
-    setTimeout(() => {
-      treeGroup.scale.multiplyScalar(1 / 1.2);
-      treeGroup.children.forEach((child) => {
-        if (child.material) {
-          child.material.color.set(
-            child.geometry.type === 'ConeGeometry' ? 0xd35f45 : 0x5b341c // Reset to original color
-          );
-        }
-      });
-    }, 2000);
-  }
-});
-
-// Animation Loop
+// Animation
 const clock = new THREE.Clock();
-
 const animate = () => {
-  // Update particles
-  const positions = particlesGeometry.attributes.position.array;
-  const velocities = particlesGeometry.attributes.velocity.array;
+  const elapsedTime = clock.getElapsedTime();
 
-  for (let i = 0; i < particleCount; i++) {
-    positions[i * 3 + 1] += velocities[i * 3 + 1]; // Y position falls
-    if (positions[i * 3 + 1] < 0) {
-      positions[i * 3 + 1] = Math.random() * 50 + 10; // Reset particle to top
-    }
-  }
+  // Firefly movement
+  fireflies.forEach(({ light, velocity }) => {
+    light.position.add(velocity);
+    if (light.position.y < 1 || light.position.y > 6) velocity.y *= -1;
+    if (light.position.x < -20 || light.position.x > 20) velocity.x *= -1;
+    if (light.position.z < -20 || light.position.z > 20) velocity.z *= -1;
+  });
 
-  particlesGeometry.attributes.position.needsUpdate = true;
+  // Shrine orb pulse
+  const intensity = Math.abs(Math.sin(elapsedTime));
+  orb.material.emissiveIntensity = intensity * 3;
 
   controls.update();
   renderer.render(scene, camera);
@@ -245,8 +175,8 @@ const animate = () => {
 
 animate();
 
-// Handle Window Resize
-window.addEventListener('resize', () => {
+// Handle window resize
+window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
