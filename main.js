@@ -138,7 +138,7 @@ base.castShadow = true;
 
 const orb = new THREE.Mesh(
   new THREE.SphereGeometry(0.5, 16, 16),
-  new THREE.MeshStandardMaterial({ emissive: 0x000000, emissiveIntensity: 10 }) // Bright black glow
+  new THREE.MeshStandardMaterial({ emissive: 0x00ff88, emissiveIntensity: 10 }) // Bright black glow
 );
 orb.position.y = 2;
 orb.castShadow = true;
